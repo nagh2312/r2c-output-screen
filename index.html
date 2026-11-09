@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>R2C Run Watch</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..600&family=Geist+Mono:wght@400..600&display=swap">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #0b0b0c;
+      --on-ink: #ffffff;
+      --surface: #ffffff;
+      --bg: #fafafa;
+      --subtle: #f2f2f3;
+      --text-2: #2d2d32;
+      --muted: #6a6a70;
+      --line: #ebebec;
+      --line-strong: #dadadc;
+      --accent: #7a2e6b;
+      --accent-strong: #5e2252;
+      --current: #f6ebf3;
+      --link: #7a2e6b;
+      --ok: #2d6a44;
+      --ok-bg: #e7f1ea;
+      --warn: #8c5c08;
+      --warn-bg: #f7efdc;
+      --danger: #a3392f;
+      --danger-bg: #f9e7e4;
+      font-family: Geist, ui-sans-serif, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px 20px 40px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--line-strong);
+    }
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+    }
+    a { color: var(--link); }
+    a:hover { color: var(--accent-strong); }
+    .meta {
+      margin-top: 6px;
+      color: var(--muted);
+      font-family: "Geist Mono", ui-monospace, Menlo, monospace;
+      font-size: 12px;
+    }
+    .status {
+      min-width: 120px;
+      min-height: 28px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      background: #efeff0;
+      color: #5a5c62;
+      border: 0;
+      text-align: center;
+      font-weight: 600;
+      text-transform: none;
+      font-size: 12.5px;
+      letter-spacing: 0;
+    }
+    .status.running { background: var(--current); color: var(--accent); }
+    .status.completed, .status.skipped { background: var(--ok-bg); color: var(--ok); }
+    .status.halted { background: var(--danger-bg); color: var(--danger); }
+    .status.degraded { background: var(--warn-bg); color: var(--warn); }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin: 18px 0;
+    }
+    .metric {
+      padding: 12px;
+      border-radius: 8px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+    }
+    .metric b {
+      display: block;
+      font-family: "Geist Mono", ui-monospace, Menlo, monospace;
+      font-size: 28px;
+      font-weight: 500;
+      line-height: 1.1;
+    }
+    .metric span {
+      color: var(--muted);
+      font-family: "Geist Mono", ui-monospace, Menlo, monospace;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .current {
+      padding: 14px;
+      margin-bottom: 16px;
+      border-radius: 8px;
+      border: 2px solid var(--accent);
+      background: var(--current);
+    }
+    .current h2 {
+      margin: 0 0 6px;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0;
+    }
+    .current p {
+      margin: 0;
+      color: var(--text-2);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+    }
+    th {
+      color: var(--muted);
+      font-family: "Geist Mono", ui-monospace, Menlo, monospace;
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: var(--subtle);
+    }
+    tr:last-child td {
+      border-bottom: 0;
+    }
+    .pill {
+      display: inline-flex;
+      min-width: 86px;
+      justify-content: center;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      background: var(--subtle);
+      color: #5a5c62;
+      border: 0;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .completed, .skipped { background: var(--ok-bg); color: var(--ok); }
+    .running { background: var(--current); color: var(--accent); }
+    .halted { background: var(--danger-bg); color: var(--danger); }
+    .degraded { background: var(--warn-bg); color: var(--warn); }
+    .pending { background: #efeff0; color: #5a5c62; }
+    .note {
+      color: var(--muted);
+      max-width: 520px;
+    }
+    .banner {
+      display: none;
+      padding: 14px;
+      margin: 16px 0;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .banner.stale {
+      border: 1px solid var(--warn);
+      background: var(--warn-bg);
+      color: var(--warn);
+    }
+    .banner.terminal {
+      border: 1px solid var(--ok);
+      background: var(--ok-bg);
+      color: var(--ok);
+    }
+    .banner.terminal.stopped {
+      border-color: var(--danger);
+      background: var(--danger-bg);
+      color: var(--danger);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .status, a, .pill { transition: none; }
+    }
+    @media (max-width: 760px) {
+      header, .summary {
+        display: block;
+      }
+      .status, .metric {
+        margin-top: 12px;
+      }
+      main { overflow-x: auto; }
+      table { min-width: 640px; }
+    }
+  </style>
+  <link rel="stylesheet" href="static/output_screen.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <div class="meta"><a href="./" style="color:#7a2e6b;font-family:Geist,sans-serif;font-weight:500;text-decoration:none">&#8592; All runs</a></div>
+        <h1 id="title">R2C Run</h1>
+        <div class="meta" id="meta">Loading...</div>
+      </div>
+      <div class="status" id="status">waiting</div>
+    </header>
+    <nav class="out-tabs" id="output-tabs" hidden></nav>
+    <div id="panel-code">
+    <section class="banner terminal" id="terminal"></section>
+    <section class="banner stale" id="staleness"></section>
+    <section class="summary" id="summary"></section>
+    <section class="current" id="current"></section>
+    <table>
+      <thead>
+        <tr>
+          <th>Stage</th>
+          <th>Status</th>
+          <th>Duration</th>
+          <th>Updated</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody id="stages"></tbody>
+    </table>
+    <section style="margin-top: 26px">
+      <h2 style="font-size: 17px; margin: 0 0 4px">Behavioral timeline</h2>
+      <div class="meta" style="margin-bottom: 8px">
+        <span id="timeline-meta">Loading...</span>
+        &nbsp;&middot;&nbsp;
+        <label style="cursor: pointer">
+          <input type="checkbox" id="show-routine">
+          show routine dispatch and validation traffic
+        </label>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Kind</th>
+            <th>Stage</th>
+            <th>What happened</th>
+          </tr>
+        </thead>
+        <tbody id="timeline"></tbody>
+      </table>
+    </section>
+    </div>
+    <section id="panel-tab" hidden></section>
+  </main>
+  <script src="static/snapshot.js"></script>
+  <script>
+    const RUN_SLUG = "bayesian-active-learning";
+    const RUN_QS = RUN_SLUG ? `?run=${encodeURIComponent(RUN_SLUG)}` : "";
+    const fmtDuration = (seconds) => {
+      if (seconds === null || seconds === undefined) return "";
+      const total = Math.max(0, Math.floor(seconds));
+      const h = Math.floor(total / 3600);
+      const m = Math.floor((total % 3600) / 60);
+      const s = total % 60;
+      if (h) return `${h}h ${m}m`;
+      if (m) return `${m}m ${s}s`;
+      return `${s}s`;
+    };
+    const elapsedSince = (iso) => {
+      if (!iso) return null;
+      const start = Date.parse(iso);
+      if (Number.isNaN(start)) return null;
+      return (Date.now() - start) / 1000;
+    };
+    const text = (value) => value === null || value === undefined || value === "" ? "" : String(value);
+    const escapeHtml = (value) => text(value).replace(/[&<>"']/g, (ch) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "\"": "&quot;",
+      "'": "&#39;",
+    }[ch]));
+    let latest = null;
+    function render(data) {
+      latest = data;
+      document.getElementById("title").textContent = data.slug ? `R2C Run: ${data.slug}` : "R2C Run";
+      const statusEl = document.getElementById("status");
+      const statusName = text(data.run_status || "waiting");
+      statusEl.textContent = statusName;
+      statusEl.className = "status " + statusName;
+      document.getElementById("meta").textContent = `Updated ${text(data.updated_at)} | ${text(data.run_dir || "")}`;
+      const totals = data.totals || {};
+      document.getElementById("summary").innerHTML = [
+        ["Stages", `${totals.stages_done || 0}/${totals.stages_total || 0}`],
+        ["Elapsed", fmtDuration(totals.elapsed_s)],
+        ["Dispatches", `${totals.dispatches_succeeded || 0} ok, ${totals.dispatches_failed || 0} failed, ${totals.dispatches_recovered || 0} recovered`],
+        ["Issues", `${totals.halts || 0} halted, ${totals.degrades || 0} degraded`],
+      ].map(([label, value]) => `<div class="metric"><b>${escapeHtml(value)}</b><span>${escapeHtml(label)}</span></div>`).join("");
+      const terminalEl = document.getElementById("terminal");
+      if (data.terminal_message) {
+        terminalEl.textContent = data.terminal_message;
+        terminalEl.className = "banner terminal" +
+          (String(data.terminal_message).startsWith("Stopped") ? " stopped" : "");
+        terminalEl.style.display = "block";
+      } else {
+        terminalEl.style.display = "none";
+      }
+      const staleEl = document.getElementById("staleness");
+      if (data.staleness && data.staleness.stale) {
+        staleEl.textContent = data.staleness.message ||
+          `No activity for ${data.staleness.minutes_since_last_event} min - the run may be stuck.`;
+        staleEl.style.display = "block";
+      } else {
+        staleEl.style.display = "none";
+      }
+      const current = data.current;
+      const currentEl = document.getElementById("current");
+      if (current) {
+        const stageElapsed = fmtDuration(elapsedSince(current.started_at));
+        const agentElapsed = fmtDuration(elapsedSince(current.agent_started_at));
+        const agent = current.agent ? `${current.agent} for ${agentElapsed}` : "No active agent dispatch";
+        currentEl.innerHTML = `<h2>${escapeHtml(current.label)}</h2><p>Running for ${escapeHtml(stageElapsed)}. ${escapeHtml(agent)}.</p>`;
+        currentEl.style.display = "block";
+      } else {
+        currentEl.style.display = "none";
+      }
+      document.getElementById("stages").innerHTML = (data.stages || []).map((stage) => {
+        const status = text(stage.status || "pending");
+        const updated = stage.ended_at || stage.started_at || "";
+        return `<tr>
+          <td>${escapeHtml(stage.label || stage.stage_id)}</td>
+          <td><span class="pill ${escapeHtml(status)}">${escapeHtml(status)}</span></td>
+          <td>${escapeHtml(fmtDuration(stage.duration_s))}</td>
+          <td>${escapeHtml(updated)}</td>
+          <td class="note">${escapeHtml(stage.notes)}</td>
+        </tr>`;
+      }).join("");
+      if (window.R2COutput) window.R2COutput.onState(data);
+    }
+    async function refresh() {
+      try {
+        const response = await fetch(`/state${RUN_QS}`, { cache: "no-store" });
+        render(await response.json());
+      } catch (error) {
+        render({ run_status: "waiting", updated_at: new Date().toISOString(), totals: {}, stages: [], current: null });
+      }
+    }
+    const CATEGORY_PILL = {
+      milestone: "completed", problem: "halted",
+      decision: "degraded", routine: "pending", other: "pending",
+    };
+    let latestTimeline = null;
+    function renderTimeline(data) {
+      latestTimeline = data;
+      const showRoutine = document.getElementById("show-routine").checked;
+      const rows = (data.events || []).filter((e) => showRoutine || e.category !== "routine");
+      const bits = [`showing ${rows.length} of ${data.total} events`];
+      if (data.shown < data.total) bits.push(`last ${data.shown} loaded`);
+      if (data.skipped_malformed) bits.push(`${data.skipped_malformed} unreadable line(s) skipped`);
+      document.getElementById("timeline-meta").textContent = bits.join(", ");
+      document.getElementById("timeline").innerHTML = rows.slice().reverse().map((e) => `<tr>
+        <td>${escapeHtml(e.timestamp || "")}</td>
+        <td><span class="pill ${CATEGORY_PILL[e.category] || "pending"}">${escapeHtml(e.category || "")}</span></td>
+        <td class="note">${escapeHtml(e.stage_label || e.stage_id || "")}</td>
+        <td class="note">${escapeHtml(e.summary || e.event_type || "")}</td>
+      </tr>`).join("");
+    }
+    async function refreshTimeline() {
+      try {
+        const response = await fetch(`/events${RUN_QS}`, { cache: "no-store" });
+        renderTimeline(await response.json());
+      } catch (error) { /* keep the last view */ }
+    }
+    document.getElementById("show-routine").addEventListener("change", () => {
+      if (latestTimeline) renderTimeline(latestTimeline);
+    });
+    setInterval(() => { if (latest) render(latest); }, 1000);
+    setInterval(refresh, 1500);
+    setInterval(refreshTimeline, 3000);
+    refresh();
+    refreshTimeline();
+  </script>
+  <script src="static/output_screen.js"></script>
+</body>
+</html>
